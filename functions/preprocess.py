@@ -63,13 +63,13 @@ def derive_text_and_labels():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     df = pd.read_csv(os.path.join(dir_path, 'datasets/parsed/iemo_daily_goemotion.csv'))
     # dataframe = dataframe.reset_index(drop=True)
-    # try:
-    #     df_new = df.loc[df['text']]
-    # except KeyError:
-    #     print('No KeyError')
-    df['text'].apply(clean_text)
-    # delete empty strings
-    df = df[df['text'] != '']
+    try:
+        df['text'].apply(clean_text)
+        # delete empty strings
+        df = df[df['text'] != '']
+    except KeyError:
+        print('No KeyError')
+
 
     labels = list()
     for line in df.emotion:

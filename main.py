@@ -7,7 +7,7 @@ import wandb
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.callbacks import Callback
 from wandb.keras import WandbCallback
-from dotenv import dotenv_values
+# from dotenv import dotenv_values
 from datetime import datetime
 import os
 import json
@@ -19,12 +19,16 @@ parser.add_argument("--out_root", help="Please specify the out root dir", type=s
 parser.add_argument("--number_of_epochs", help="how much epochs", default=8, type=int)
 parser.add_argument("--batch_size", help="batch size", default=64, type=int)
 parser.add_argument("--architecture", help="please specify the architecture of the classifier", default="LSTM", type=str)
+parser.add_argument("--project", type=str)
+parser.add_argument("--entitiy", type=str)
 
 args = parser.parse_args()
 OUT_ROOT = args.out_root
 EPOCHS = args.number_of_epochs
 BATCH_SIZE = args.batch_size
 ARCHITECTURE = args.architecture
+PROJECT = args.project
+ENTITY = args.entity
 
 # emotion mapping: { 0: happiness, 1: sadness, 2: anger, 3: surprise, 4: frustration, 5: neutral, 6: excited}
 def determine_label(line):
@@ -74,8 +78,8 @@ def convert_model(model_name, dir):
 
 if __name__ == '__main__':
     # get environment variables if using wandb
-    env_variables = dotenv_values(".env")  # config = {"api_key": "", "entity": "", "project": ""}
-    wandb.login(key=env_variables.get("api_key"))
+    #env_variables = dotenv_values(".env")  # config = {"api_key": "", "entity": "", "project": ""}
+    #wandb.login(key=env_variables.get("api_key"))
 
     # Set an experiment name to group training and evaluation in wandb
     experiment_name = "lstm_simple"
@@ -98,10 +102,20 @@ if __name__ == '__main__':
     else:
         print('Found GPU at: {}'.format(device_name))
 
+    project = ""
+    entity = ""
+    if PROJECT and ENTITY:
+        project = PROJECT
+        entity = ENTITY
+    else:
+        project = "none"
+        entity = "none"
     # Start a run, tracking hyperparameters with wandb
+    # project=env_variables.get("project"),
+    # entity=env_variables.get("entity"),
     run = wandb.init(
-        project=env_variables.get("project"),
-        entity=env_variables.get("entity"),
+        project=project,
+        entity=entity,
         group=experiment_name,
         config=my_config)
     config = wandb.config

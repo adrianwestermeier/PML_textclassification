@@ -31,8 +31,11 @@ def determine_label(line):
 # we need the max_length in order to determine the input length of the neural net
 def determine_max_length(df):
     texts = list()
-    for line in df.text:
-        texts.append(line)
+    try:
+        for line in df['text']:
+            texts.append(line)
+    except KeyError:
+        print("key error")
     lengths = list()
     for text in texts:
         lengths.append(len(text.split()))

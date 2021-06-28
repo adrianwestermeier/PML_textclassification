@@ -60,6 +60,7 @@ def clean_text(text):
 
 # load datadict and assign numerical categories according to labels
 def derive_text_and_labels():
+    pd.set_option('mode.chained_assignment', None)
     dir_path = os.path.dirname(os.path.realpath(__file__))
     dataframe = pd.read_csv(os.path.join(dir_path, 'datasets/parsed/iemo_daily_goemotion.csv'))
     dataframe = dataframe.reset_index(drop=True)

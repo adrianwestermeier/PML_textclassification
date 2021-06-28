@@ -20,7 +20,7 @@ parser.add_argument("--number_of_epochs", help="how much epochs", default=8, typ
 parser.add_argument("--batch_size", help="batch size", default=64, type=int)
 parser.add_argument("--architecture", help="please specify the architecture of the classifier", default="LSTM", type=str)
 parser.add_argument("--project", type=str)
-parser.add_argument("--entity", type=str)
+parser.add_argument("--entit    y", type=str)
 
 args = parser.parse_args()
 OUT_ROOT = args.out_root

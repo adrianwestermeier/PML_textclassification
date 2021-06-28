@@ -190,4 +190,4 @@ if __name__ == '__main__':
     result = result.drop(result[result['emotion'] == "happiness"].sample(frac=.6, random_state=42).index)
     result = result.drop(result[result['emotion'] == "neutral"].sample(frac=.5, random_state=42).index)
     print(result["emotion"].value_counts())
-    result.to_csv('datasets/parsed/iemo_daily_goemotion.csv')
+    result.to_csv('datasets/parsed/iemo_daily_goemotion.csv', index=False)

@@ -110,9 +110,10 @@ if __name__ == '__main__':
     else:
         project = "none"
         entity = "none"
+        #project = env_variables.get("project")
+        #entity = env_variables.get("entity")
     # Start a run, tracking hyperparameters with wandb
-    # project=env_variables.get("project"),
-    # entity=env_variables.get("entity"),
+
     run = wandb.init(
         project=project,
         entity=entity,

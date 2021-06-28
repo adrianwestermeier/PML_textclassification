@@ -61,19 +61,22 @@ def clean_text(text):
 # load datadict and assign numerical categories according to labels
 def derive_text_and_labels():
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    dataframe = pd.read_csv(os.path.join(dir_path, 'datasets/parsed/iemo_daily_goemotion.csv'))
+    df = pd.read_csv(os.path.join(dir_path, 'datasets/parsed/iemo_daily_goemotion.csv'))
     # dataframe = dataframe.reset_index(drop=True)
-    print(dataframe.head())
-    dataframe['text'] = dataframe['text'].apply(clean_text)
+    # try:
+    #     df_new = df.loc[df['text']]
+    # except KeyError:
+    #     print('No KeyError')
+    df['text'].apply(clean_text)
     # delete empty strings
-    dataframe = dataframe[dataframe['text'] != '']
+    df = df[df['text'] != '']
 
     labels = list()
-    for line in dataframe.emotion:
+    for line in df.emotion:
         # mapping: { 0: happiness, 1: sadness, 2: anger, 3: surprise, 4: frustration, 5: neutral, 6: excited}
         labels.append(determine_label(line))
-    texts, maxlen = determine_max_length(dataframe)
-    dataframe = dataframe.assign(labels=labels)
+    texts, maxlen = determine_max_length(df)
+    dataframe = df.assign(labels=labels)
     labels = np.array(labels)
     texts = np.array(texts)
     # return texts, labels, maxlen

@@ -66,6 +66,7 @@ def derive_text_and_labels():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     print(dir_path)
     dir_path = os.path.join(dir_path, 'datasets/parsed/iemo_daily_goemotion.csv')
+    print(dir_path)
     df = pd.read_csv(dir_path)
     print('df head')
     print(df.head())

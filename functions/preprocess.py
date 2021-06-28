@@ -68,13 +68,16 @@ def derive_text_and_labels():
         # delete empty strings
         df = df[df['text'] != '']
     except KeyError:
-        print('No KeyError')
+        print('No KeyError text')
 
 
     labels = list()
-    for line in df['emotion']:
-        # mapping: { 0: happiness, 1: sadness, 2: anger, 3: surprise, 4: frustration, 5: neutral, 6: excited}
-        labels.append(determine_label(line))
+    try:
+        for line in df['emotion']:
+            # mapping: { 0: happiness, 1: sadness, 2: anger, 3: surprise, 4: frustration, 5: neutral, 6: excited}
+            labels.append(determine_label(line))
+    except KeyError:
+        print('No KeyError emotion')
     texts, maxlen = determine_max_length(df)
     dataframe = df.assign(labels=labels)
     labels = np.array(labels)

@@ -65,7 +65,10 @@ def clean_text(text):
 def derive_text_and_labels():
     dir_path = os.path.dirname(os.path.realpath(__file__))
     print(dir_path)
-    df = pd.read_csv(os.path.join(dir_path, 'datasets/parsed/iemo_daily_goemotion.csv'))
+    dir_path = os.path.join(dir_path, 'datasets/parsed/iemo_daily_goemotion.csv')
+    df = pd.read_csv(dir_path)
+    print('df head')
+    print(df.head())
     # dataframe = dataframe.reset_index(drop=True)
     try:
         df['text'].apply(clean_text)

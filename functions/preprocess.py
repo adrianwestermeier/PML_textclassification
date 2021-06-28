@@ -72,7 +72,7 @@ def derive_text_and_labels():
 
 
     labels = list()
-    for line in df.emotion:
+    for line in df['emotion']:
         # mapping: { 0: happiness, 1: sadness, 2: anger, 3: surprise, 4: frustration, 5: neutral, 6: excited}
         labels.append(determine_label(line))
     texts, maxlen = determine_max_length(df)

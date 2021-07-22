@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import os
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 '''
 This file is for transforming several raw multi-emotion-label data .csv files (iemocap, dailydialogue, goemtotion) into 
@@ -62,6 +64,16 @@ def determine_emotion(label):
         return "no known label"
 
 
+def plot_number_of_occurrences(df, column_name, df_name):
+    sns.countplot(df[column_name])
+    plt.xlabel(column_name)
+    plt.xticks(rotation=70)
+    # plt.show()
+    plt.tight_layout()
+    plt.savefig(df_name + '.png')
+    plt.close()
+
+
 # parse the daily dialogue dataset
 def parse_dailydialogue():
     # { 0: no emotion, 1: anger, 2: disgust, 3: fear, 4: happiness, 5: sadness, 6: surprise}
@@ -73,14 +85,15 @@ def parse_dailydialogue():
     df_flat_result = pd.DataFrame([el for sublist in result for el in sublist])
     df_flat_result.columns = ['text', 'label']
     df_flat_result["emotion"] = df_flat_result["label"].apply(lambda x: determine_emotion(x))
-    # df_flat_result = df_flat_result[df_flat_result["emotion"] != "disgust"]
+    df_flat_result = df_flat_result[df_flat_result["emotion"] != "no emotion"]
     # df_flat_result = df_flat_result[df_flat_result["emotion"] != "fear"]
     print(df_flat_result.head())
     print("daily dialogue parsed:\n", df_flat_result["emotion"].value_counts())
     # df_sample = df_flat_result.groupby("emotion").sample(n=1000, random_state=1)
     # print(df_sample["emotion"].value_counts())
     df_flat_result = df_flat_result.drop(columns=["label"])
-    df_flat_result.to_csv('datasets/parsed/DailyDialogue_parsed.csv')
+    # plot_number_of_occurrences(df=df_flat_result, column_name="emotion", df_name="dailydialogue")
+    # df_flat_result.to_csv('datasets/parsed/DailyDialogue_parsed.csv')
     return df_flat_result
 
 
@@ -124,7 +137,8 @@ def parse_iemocap():
     df_merged.replace({"emotion": di}, inplace=True)
     print("iemocap parsed:\n", df_merged["emotion"].value_counts())
     df_merged = df_merged.drop(columns=["session_id"])
-    df_merged.to_csv('datasets/parsed/iemocap_parsed.csv')
+    # plot_number_of_occurrences(df=df_merged, column_name="emotion", df_name="iemocap")
+    # df_merged.to_csv('datasets/parsed/iemocap_parsed.csv')
     return df_merged
 
 
@@ -167,6 +181,7 @@ def parse_goemotion():
         lambda x: [emotion for emotion, emotion_list in ekman_level_dict.items() if x in emotion_list][0])
     print("df_goemotion value counts", df_train["emotion"].value_counts())
     print("df_goemotion head", df_train.head())
+    # plot_number_of_occurrences(df=df_train, column_name="emotion", df_name="goemotion")
     return df_train
 
 
@@ -181,13 +196,15 @@ if __name__ == '__main__':
 
     # discard labels with unfitting/ too few samples
     result = result[result['emotion'].map(
-        lambda x: (x != "xxx" and x != "other" and x != "no emotion" and x != "disgust" and x != "fear")
+        lambda x: (x != "xxx" and x != "other" and x != "no emotion" and x != "disgust" and x != "excited" and x != "frustration")
     )]
     print(result["emotion"].value_counts())
     # df_sample = result.groupby("emotion").sample(n=5000, replace=True, random_state=1)
     result = result.reset_index(drop=True)
+    plot_number_of_occurrences(df=result, column_name="emotion", df_name="combined_before_sampling_new_labels")
     # downsampling of happiness and neutral samples because there are too many
     result = result.drop(result[result['emotion'] == "happiness"].sample(frac=.6, random_state=42).index)
     result = result.drop(result[result['emotion'] == "neutral"].sample(frac=.5, random_state=42).index)
     print(result["emotion"].value_counts())
-    result.to_csv('datasets/parsed/iemo_daily_goemotion.csv', index=False)
+    plot_number_of_occurrences(df=result, column_name="emotion", df_name="combined_new_labels")
+    result.to_csv('datasets/parsed/iemo_daily_goemotion_new_labels.csv', index=False)

@@ -7,18 +7,21 @@ import wandb
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 from tensorflow.keras.callbacks import Callback
 from wandb.keras import WandbCallback
-# from dotenv import dotenv_values
+from dotenv import dotenv_values
 from datetime import datetime
 import os
 import json
 import argparse
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import plot_confusion_matrix
+import matplotlib.pyplot as plt
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--out_root", help="Please specify the out root dir", type=str)
-parser.add_argument("--number_of_epochs", help="how much epochs", default=8, type=int)
+parser.add_argument("--number_of_epochs", help="how much epochs", default=1, type=int)
 parser.add_argument("--batch_size", help="batch size", default=64, type=int)
-parser.add_argument("--architecture", help="please specify the architecture of the classifier", default="LSTM", type=str)
+parser.add_argument("--architecture", help="please specify the architecture of the classifier", default="CNN", type=str)
 parser.add_argument("--project", type=str)
 parser.add_argument("--entity", type=str)
 
@@ -78,11 +81,11 @@ def convert_model(model_name, dir):
 
 if __name__ == '__main__':
     # get environment variables if using wandb
-    #env_variables = dotenv_values(".env")  # config = {"api_key": "", "entity": "", "project": ""}
-    #wandb.login(key=env_variables.get("api_key"))
+    env_variables = dotenv_values(".env")  # config = {"api_key": "", "entity": "", "project": ""}
+    wandb.login(key=env_variables.get("api_key"))
 
     # Set an experiment name to group training and evaluation in wandb
-    experiment_name = "lstm_simple"
+    experiment_name = "cnn_test"
 
     # see available architectures in classifier
     my_config = {
@@ -108,10 +111,10 @@ if __name__ == '__main__':
         project = PROJECT
         entity = ENTITY
     else:
-        project = "none"
-        entity = "none"
-        #project = env_variables.get("project")
-        #entity = env_variables.get("entity")
+        #project = "none"
+        #entity = "none"
+        project = env_variables.get("project")
+        entity = env_variables.get("entity")
     # Start a run, tracking hyperparameters with wandb
 
     run = wandb.init(
@@ -167,6 +170,25 @@ if __name__ == '__main__':
         # train the classifier, TODO: early stopping
         classifier.fit(X, Y, parameters)
         loss, accuracy = classifier.evaluate(test_X, test_Y)
+
+        # confusion matrix
+
+        predictions = classifier.predict(test_X)
+        class_names = ["happiness", "sadness", "anger", "surprise", "fear", "neutral"]
+        cm = confusion_matrix(test_Y.argmax(axis=1), predictions.argmax(axis=1))
+        # plot_confusion_matrix(classifier, test_X, test_Y,
+        #                       display_labels=class_names,
+        #                       cmap=plt.cm.Blues,
+        #                       #normalize=normalize
+        #                       )
+        # plt.savefig(directory)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["happiness", "sadness", "anger", "surprise", "frustration", "neutral", "excited"])
+        disp.plot()
+        # plt.show()
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig(directory)
+        plt.close()
 
         # save the model
         model_name = 'model_' + config.architecture + '_acc_' + str(accuracy) + '.h5'

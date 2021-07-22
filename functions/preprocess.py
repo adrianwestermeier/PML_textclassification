@@ -47,6 +47,7 @@ def determine_max_length(df):
 def clean_text(text):
     REPLACE_BY_SPACE_RE = re.compile('[/(){}\[\]\|@,;]')
     BAD_SYMBOLS_RE = re.compile('[^0-9a-z #+_]')
+    REPLY_RE = re.compile('@\S+')
     STOPWORDS = set(stopwords.words('english'))
     text = text.lower()  # lowercase text
     # replace REPLACE_BY_SPACE_RE symbols by space in text.
@@ -55,9 +56,12 @@ def clean_text(text):
     text = BAD_SYMBOLS_RE.sub('', text)
     # remove symbols which are in BAD_SYMBOLS_RE from text.
     # substitute the matched string in BAD_SYMBOLS_RE with nothing.
+    text = REPLY_RE.sub('', text)
+    # substitute @-Replies with nothing.
 
     # stopwords seem to matter so we include them for now
     # text = ' '.join(word for word in text.split() if word not in STOPWORDS)  # remove stopwors from text
+
     return text
 
 

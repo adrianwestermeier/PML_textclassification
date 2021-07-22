@@ -111,12 +111,10 @@ if __name__ == '__main__':
         project = PROJECT
         entity = ENTITY
     else:
-        #project = "none"
-        #entity = "none"
         project = env_variables.get("project")
         entity = env_variables.get("entity")
-    # Start a run, tracking hyperparameters with wandb
 
+    # Start a run, tracking hyperparameters with wandb
     run = wandb.init(
         project=project,
         entity=entity,
@@ -167,24 +165,15 @@ if __name__ == '__main__':
             'val_data': (test_X, test_Y)
         }
 
-        # train the classifier, TODO: early stopping
+        # train the classifier
         classifier.fit(X, Y, parameters)
         loss, accuracy = classifier.evaluate(test_X, test_Y)
 
-        # confusion matrix
-
+        # plot the confusion matrix
         predictions = classifier.predict(test_X)
-        class_names = ["happiness", "sadness", "anger", "surprise", "fear", "neutral"]
         cm = confusion_matrix(test_Y.argmax(axis=1), predictions.argmax(axis=1))
-        # plot_confusion_matrix(classifier, test_X, test_Y,
-        #                       display_labels=class_names,
-        #                       cmap=plt.cm.Blues,
-        #                       #normalize=normalize
-        #                       )
-        # plt.savefig(directory)
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=["happiness", "sadness", "anger", "surprise", "frustration", "neutral", "excited"])
         disp.plot()
-        # plt.show()
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.savefig(directory)

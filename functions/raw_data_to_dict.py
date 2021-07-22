@@ -84,16 +84,19 @@ def parse_dailydialogue():
     # flattens the result and treats entries in list as rows in df
     df_flat_result = pd.DataFrame([el for sublist in result for el in sublist])
     df_flat_result.columns = ['text', 'label']
+
+    # map emotion labels to numbers
     df_flat_result["emotion"] = df_flat_result["label"].apply(lambda x: determine_emotion(x))
     df_flat_result = df_flat_result[df_flat_result["emotion"] != "no emotion"]
-    # df_flat_result = df_flat_result[df_flat_result["emotion"] != "fear"]
+
     print(df_flat_result.head())
     print("daily dialogue parsed:\n", df_flat_result["emotion"].value_counts())
-    # df_sample = df_flat_result.groupby("emotion").sample(n=1000, random_state=1)
-    # print(df_sample["emotion"].value_counts())
+
     df_flat_result = df_flat_result.drop(columns=["label"])
-    # plot_number_of_occurrences(df=df_flat_result, column_name="emotion", df_name="dailydialogue")
-    # df_flat_result.to_csv('datasets/parsed/DailyDialogue_parsed.csv')
+
+    # plot for presentation
+    plot_number_of_occurrences(df=df_flat_result, column_name="emotion", df_name="dailydialogue")
+    df_flat_result.to_csv('datasets/parsed/DailyDialogue_parsed.csv')
     return df_flat_result
 
 
@@ -128,17 +131,22 @@ def parse_iemocap():
 
     df = pd.DataFrame(transcriptions, columns=["session_id", "text"])
     df_emotion = pd.DataFrame(emotions, columns=["session_id", "emotion"])
-
     df_merged = df.merge(df_emotion, on="session_id")
+
     print(df_merged.head())
     print("iemocap parsed:\n", df_merged["emotion"].value_counts())
+
+    # map abbreviations to emotions
     di = {"fru": "frustration", "neu": "neutral", "ang": "anger", "sad": "sadness", "exc": "excited", "hap": "happiness",
           "sur": "surprise", "fea": "fear", "oth": "other", "dis": "disgust"}
     df_merged.replace({"emotion": di}, inplace=True)
+
     print("iemocap parsed:\n", df_merged["emotion"].value_counts())
     df_merged = df_merged.drop(columns=["session_id"])
-    # plot_number_of_occurrences(df=df_merged, column_name="emotion", df_name="iemocap")
-    # df_merged.to_csv('datasets/parsed/iemocap_parsed.csv')
+
+    # plot for presentation
+    plot_number_of_occurrences(df=df_merged, column_name="emotion", df_name="iemocap")
+    df_merged.to_csv('datasets/parsed/iemocap_parsed.csv')
     return df_merged
 
 
@@ -174,37 +182,46 @@ def parse_goemotion():
         "neutral": ["neutral"]
     }
 
-    # y = list(ekman_level_dict.keys())[list(ekman_level_dict.values()).index("neutral")]
-
+    # map emotion labels according to ekman emotion mapping
     df_train['emotion'] = df_train['emotion'].apply(lambda x: emotions_dict[int(x)])
     df_train['emotion'] = df_train['emotion'].apply(
         lambda x: [emotion for emotion, emotion_list in ekman_level_dict.items() if x in emotion_list][0])
+
     print("df_goemotion value counts", df_train["emotion"].value_counts())
     print("df_goemotion head", df_train.head())
-    # plot_number_of_occurrences(df=df_train, column_name="emotion", df_name="goemotion")
+
+    # plot for presentation
+    plot_number_of_occurrences(df=df_train, column_name="emotion", df_name="goemotion")
     return df_train
 
 
 if __name__ == '__main__':
+    # preprocess all datasets and merge them together
     df_dailydialogue = parse_dailydialogue()
     df_iemocap = parse_iemocap()
     df_goemotion = parse_goemotion()
 
     frames = [df_dailydialogue, df_iemocap, df_goemotion]
     result = pd.concat(frames)
+
     print(result["emotion"].value_counts())
 
     # discard labels with unfitting/ too few samples
     result = result[result['emotion'].map(
         lambda x: (x != "xxx" and x != "other" and x != "no emotion" and x != "disgust" and x != "excited" and x != "frustration")
     )]
+
     print(result["emotion"].value_counts())
-    # df_sample = result.groupby("emotion").sample(n=5000, replace=True, random_state=1)
+
     result = result.reset_index(drop=True)
+    # plot for presentation
     plot_number_of_occurrences(df=result, column_name="emotion", df_name="combined_before_sampling_new_labels")
+
     # downsampling of happiness and neutral samples because there are too many
     result = result.drop(result[result['emotion'] == "happiness"].sample(frac=.6, random_state=42).index)
     result = result.drop(result[result['emotion'] == "neutral"].sample(frac=.5, random_state=42).index)
+
     print(result["emotion"].value_counts())
+    # plot for presentation
     plot_number_of_occurrences(df=result, column_name="emotion", df_name="combined_new_labels")
     result.to_csv('datasets/parsed/iemo_daily_goemotion_new_labels.csv', index=False)

@@ -50,10 +50,12 @@ def clean_text(text):
     REPLY_RE = re.compile('@\S+')
     STOPWORDS = set(stopwords.words('english'))
     text = text.lower()  # lowercase text
+
     # replace REPLACE_BY_SPACE_RE symbols by space in text.
     # substitute the matched string in REPLACE_BY_SPACE_RE with space.
     text = REPLACE_BY_SPACE_RE.sub(' ', text)
     text = BAD_SYMBOLS_RE.sub('', text)
+
     # remove symbols which are in BAD_SYMBOLS_RE from text.
     # substitute the matched string in BAD_SYMBOLS_RE with nothing.
     text = REPLY_RE.sub('', text)
@@ -68,20 +70,17 @@ def clean_text(text):
 # load datadict and assign numerical categories according to labels
 def derive_text_and_labels():
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    print(dir_path)
     dir_path = os.path.join(dir_path, 'datasets/parsed/iemo_daily_goemotion.csv')
-    print(dir_path)
     df = pd.read_csv(dir_path)
     print('df head')
     print(df.head())
-    # dataframe = dataframe.reset_index(drop=True)
+
     try:
         df['text'].apply(clean_text)
         # delete empty strings
         df = df[df['text'] != '']
     except KeyError:
         print('No KeyError text')
-
 
     labels = list()
     try:
@@ -94,7 +93,7 @@ def derive_text_and_labels():
     dataframe = df.assign(labels=labels)
     labels = np.array(labels)
     texts = np.array(texts)
-    # return texts, labels, maxlen
+
     return dataframe, maxlen
 
 

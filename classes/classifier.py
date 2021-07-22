@@ -11,14 +11,14 @@ class Classifier(object):
         input_shape = (maxlen,)
         target_shape = (maxlen, 1)
         X = X
-        MAX_NB_WORDS=50000
-        EMBEDDING_DIM=100
+        MAX_NB_WORDS = 50000
+        EMBEDDING_DIM = 100
 
         self.model_scheme = []
 
-        if config.architecture == "LSTM":
+        if config.architecture == "LSTM":  # basic one layer LSTM
             self.model_scheme = [
-                Embedding(MAX_NB_WORDS, EMBEDDING_DIM, input_length=X.shape[1], trainable=False),
+                Embedding(MAX_NB_WORDS, EMBEDDING_DIM, input_length=X.shape[1], trainable=True),
                 SpatialDropout1D(config.dropout),
                 LSTM(128, dropout=config.dropout, recurrent_dropout=0.2),
                 LayerNormalization(axis=1),
@@ -27,27 +27,76 @@ class Classifier(object):
                 Dense(number_of_classes, activation='softmax')
             ]
             self.__model = tf.keras.Sequential(self.model_scheme)
-        elif config.architecture == "LSTM_bidirectional":
-            # TODO: 32 still to much :(
+        elif config.architecture == "LSTM_bidirectional":  # one layer bidirectional LSTM
             self.model_scheme = [
-                    Embedding(MAX_NB_WORDS, EMBEDDING_DIM, input_length=X.shape[1], trainable=True),
-                    SpatialDropout1D(config.dropout),
-                    Bidirectional(LSTM(32, dropout=config.dropout, recurrent_dropout=0.2)),
-                    LayerNormalization(axis=1),
-                    # Dense(128, activation='relu'),
-                    # Dropout(rate=0.2),
-                    Dense(number_of_classes, activation='softmax')
-                ]
+                Embedding(MAX_NB_WORDS, EMBEDDING_DIM, input_length=X.shape[1], trainable=True),
+                SpatialDropout1D(config.dropout),
+                Bidirectional(LSTM(128, dropout=config.dropout, recurrent_dropout=0.2)),
+                LayerNormalization(axis=1),
+                Dense(128, activation='relu'),
+                Dropout(rate=0.2),
+                Dense(number_of_classes, activation='softmax')
+            ]
             self.__model = tf.keras.Sequential(self.model_scheme)
-        elif config.architecture == "LSTM_CNN":
-            # TODO: make second sequence and try out without bidirectional, try IEMOCAP architecture
+        elif config.architecture == "LSTM_CNN":  # combination of bidirectional LSTM and CNN
             sequence_input = Input(shape=input_shape, dtype='int32')
 
             embedding_layer_train = Embedding(MAX_NB_WORDS, EMBEDDING_DIM, input_length=X.shape[1], trainable=True)
             embedded_sequences_train = embedding_layer_train(sequence_input)
             drop1 = SpatialDropout1D(config.dropout)
             embedded_sequences_train_drop = drop1(embedded_sequences_train)
-            l_lstm1 = Bidirectional(LSTM(6, return_sequences=True, dropout=0.3, recurrent_dropout=0.0))(embedded_sequences_train_drop)
+            l_lstm1 = Bidirectional(LSTM(6, return_sequences=True, dropout=0.3, recurrent_dropout=0.0))(
+                embedded_sequences_train_drop)
+            l_conv_2 = Conv1D(filters=24, kernel_size=2, activation='relu')(l_lstm1)
+            l_conv_2 = Dropout(0.3)(l_conv_2)
+            l_conv_3 = Conv1D(filters=24, kernel_size=3, activation='relu')(l_lstm1)
+            l_conv_3 = Dropout(0.3)(l_conv_3)
+
+            l_conv_5 = Conv1D(filters=24, kernel_size=5, activation='relu', )(l_lstm1)
+            l_conv_5 = Dropout(0.3)(l_conv_5)
+            l_conv_6 = Conv1D(filters=24, kernel_size=6, activation='relu',
+                              kernel_regularizer=tf.keras.regularizers.l2(0.0001))(
+                l_lstm1)
+            l_conv_6 = Dropout(0.3)(l_conv_6)
+
+            l_conv_8 = Conv1D(filters=24, kernel_size=8, activation='relu',
+                              kernel_regularizer=tf.keras.regularizers.l2(0.0001))(
+                l_lstm1)
+            l_conv_8 = Dropout(0.3)(l_conv_8)
+
+            conv_1 = [l_conv_6, l_conv_5, l_conv_8, l_conv_2, l_conv_3]
+
+            l_lstm_c = Concatenate(axis=1)(conv_1)
+
+            l_pool = MaxPooling1D(4)(l_lstm_c)
+            l_drop = Dropout(0.5)(l_pool)
+            l_flat = Flatten()(l_drop)
+            l_dense = Dense(26, activation='relu')(l_flat)
+            preds = Dense(number_of_classes, activation='softmax')(l_dense)
+            self.__model = tf.keras.Model(sequence_input, preds)
+        elif config.architecture == "balance_net":  # credits: https://github.com/tlkh/text-emotion-classification
+            sequence_input = Input(shape=input_shape, dtype='int32')
+
+            # static channel
+            embedding_layer_frozen = Embedding(MAX_NB_WORDS,
+                                               EMBEDDING_DIM,
+                                               input_length=X.shape[1],
+                                               trainable=False)
+            embedded_sequences_frozen = embedding_layer_frozen(sequence_input)
+
+            # non-static channel
+            embedding_layer_train = Embedding(MAX_NB_WORDS,
+                                              EMBEDDING_DIM,
+                                              input_length=X.shape[1],
+                                              trainable=True)
+            embedded_sequences_train = embedding_layer_train(sequence_input)
+
+            # lstm > cnn
+            l_lstm1f = Bidirectional(LSTM(6, return_sequences=True, dropout=0.3, recurrent_dropout=0.0))(
+                embedded_sequences_frozen)
+            l_lstm1t = Bidirectional(LSTM(6, return_sequences=True, dropout=0.3, recurrent_dropout=0.0))(
+                embedded_sequences_train)
+            l_lstm1 = Concatenate(axis=1)([l_lstm1f, l_lstm1t])
             l_conv_2 = Conv1D(filters=24, kernel_size=2, activation='relu')(l_lstm1)
             l_conv_2 = Dropout(0.3)(l_conv_2)
             l_conv_3 = Conv1D(filters=24, kernel_size=3, activation='relu')(l_lstm1)
@@ -67,13 +116,38 @@ class Classifier(object):
 
             l_lstm_c = Concatenate(axis=1)(conv_1)
 
-            l_pool = MaxPooling1D(4)(l_lstm_c)
+            # cnn > lstm
+            l_conv_4f = Conv1D(filters=12, kernel_size=4, activation='relu',
+                               kernel_regularizer=tf.keras.regularizers.l2(0.0001))(embedded_sequences_frozen)
+            l_conv_4f = Dropout(0.3)(l_conv_4f)
+            l_conv_4t = Conv1D(filters=12, kernel_size=4, activation='relu',
+                               kernel_regularizer=tf.keras.regularizers.l2(0.0001))(embedded_sequences_train)
+            l_conv_4t = Dropout(0.3)(l_conv_4t)
+
+            l_conv_3f = Conv1D(filters=12, kernel_size=3, activation='relu', )(embedded_sequences_frozen)
+            l_conv_3f = Dropout(0.3)(l_conv_3f)
+            l_conv_3t = Conv1D(filters=12, kernel_size=3, activation='relu', )(embedded_sequences_train)
+            l_conv_3t = Dropout(0.3)(l_conv_3t)
+
+            l_conv_2f = Conv1D(filters=12, kernel_size=2, activation='relu')(embedded_sequences_frozen)
+            l_conv_2f = Dropout(0.3)(l_conv_2f)
+            l_conv_2t = Conv1D(filters=12, kernel_size=2, activation='relu')(embedded_sequences_train)
+            l_conv_2t = Dropout(0.3)(l_conv_2t)
+
+            conv_2 = [l_conv_4f, l_conv_4t, l_conv_3f, l_conv_3t, l_conv_2f, l_conv_2t]
+
+            l_merge_2 = Concatenate(axis=1)(conv_2)
+            l_c_lstm = Bidirectional(LSTM(12, return_sequences=True, dropout=0.3, recurrent_dropout=0.0))(l_merge_2)
+
+            # combine
+            l_merge = Concatenate(axis=1)([l_lstm_c, l_c_lstm])
+            l_pool = MaxPooling1D(4)(l_merge)
             l_drop = Dropout(0.5)(l_pool)
             l_flat = Flatten()(l_drop)
             l_dense = Dense(26, activation='relu')(l_flat)
             preds = Dense(number_of_classes, activation='softmax')(l_dense)
             self.__model = tf.keras.Model(sequence_input, preds)
-        else:
+        else:  # baseline CNN
             self.model_scheme = [
                 Reshape(input_shape=input_shape, target_shape=target_shape),
                 Conv1D(128, kernel_size=5, strides=1, activation=activations.relu),  # kernel_regularizer='l1'
@@ -90,9 +164,7 @@ class Classifier(object):
             ]
             self.__model = tf.keras.Sequential(self.model_scheme)
 
-
-        # compile model like you usually do.
-        # notice use of config.
+        # compile model
         optimizer = tf.keras.optimizers.Adam(config.learning_rate)
         self.__model.compile(
             optimizer=optimizer,
@@ -101,6 +173,7 @@ class Classifier(object):
         )
         print(self.__model.summary())
 
+    # training
     def fit(self, X, Y, hyperparameters):
         initial_time = time.time()
         self.__model.fit(X, Y,
